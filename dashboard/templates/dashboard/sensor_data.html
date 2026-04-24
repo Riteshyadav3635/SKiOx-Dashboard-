@@ -1,0 +1,309 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}SkiOx Dashboard - Sensor Data{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h1 class="mb-4">
+            <i class="bi bi-graph-up"></i> Sensor Data Monitoring
+        </h1>
+    </div>
+</div>
+
+<!-- Latest Reading Cards -->
+<div class="row mb-4" id="latest-cards">
+    <div class="col-md-6 col-lg-3">
+        <div class="card border-primary shadow-sm">
+            <div class="card-body text-center">
+                <h3 id="spo2-value" class="text-primary">--</h3>
+                <p class="card-text">SpO2 Level (%)</p>
+                <small class="text-muted" id="spo2-status">--</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-lg-3">
+        <div class="card border-success shadow-sm">
+            <div class="card-body text-center">
+                <h3 id="hr-value" class="text-success">--</h3>
+                <p class="card-text">Heart Rate (BPM)</p>
+                <small class="text-muted" id="hr-status">--</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-lg-3">
+        <div class="card border-info shadow-sm">
+            <div class="card-body text-center">
+                <h3 id="quality-value" class="text-info">--</h3>
+                <p class="card-text">Signal Quality (%)</p>
+                <small class="text-muted">Sensor Signal</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-lg-3">
+        <div class="card border-warning shadow-sm">
+            <div class="card-body text-center">
+                <p id="reading-time" class="text-muted mb-0">--:--:--</p>
+                <p class="card-text">Last Updated</p>
+                <small class="text-muted">Real-time</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row mb-4">
+    <div class="col-md-12 col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="bi bi-graph-up"></i> SpO2 Levels</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="spo2Chart" height="80"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-12 col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="bi bi-graph-up"></i> Heart Rate</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="hrChart" height="80"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="bi bi-calculator"></i> Statistics</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Metric</th>
+                                <th>Value</th>
+                                <th>Min</th>
+                                <th>Max</th>
+                                <th>Average</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stats-body">
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">
+                                    <div class="spinner-border spinner-border-sm" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    Loading statistics...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Readings Log -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white d-flex justify-content-between">
+                <h5 class="mb-0"><i class="bi bi-list-ul"></i> Reading History</h5>
+                <button class="btn btn-sm btn-primary" id="refresh-readings">
+                    <i class="bi bi-arrow-clockwise"></i> Refresh
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>SpO2 (%)</th>
+                                <th>Heart Rate (BPM)</th>
+                                <th>Normal</th>
+                                <th>Quality</th>
+                                <th>Timestamp</th>
+                            </tr>
+                        </thead>
+                        <tbody id="readings-table">
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">
+                                    <div class="spinner-border spinner-border-sm" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let spo2Chart = null;
+let hrChart = null;
+let chartLabels = [];
+let spo2Data = [];
+let hrData = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+    initCharts();
+    loadLatestReading();
+    loadStatistics();
+    loadReadings();
+    
+    // Auto-refresh
+    setInterval(loadLatestReading, 3000);
+    setInterval(loadStatistics, 10000);
+    setInterval(loadReadings, 15000);
+    
+    document.getElementById('refresh-readings').addEventListener('click', loadReadings);
+});
+
+function initCharts() {
+    const ctxSpo2 = document.getElementById('spo2Chart').getContext('2d');
+    spo2Chart = new Chart(ctxSpo2, {
+        type: 'line',
+        data: {
+            labels: chartLabels,
+            datasets: [{
+                label: 'SpO2 Level (%)',
+                data: spo2Data,
+                borderColor: 'rgb(54, 162, 235)',
+                backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                borderWidth: 2,
+                tension: 0.1,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100
+                }
+            }
+        }
+    });
+
+    const ctxHr = document.getElementById('hrChart').getContext('2d');
+    hrChart = new Chart(ctxHr, {
+        type: 'line',
+        data: {
+            labels: chartLabels,
+            datasets: [{
+                label: 'Heart Rate (BPM)',
+                data: hrData,
+                borderColor: 'rgb(75, 192, 75)',
+                backgroundColor: 'rgba(75, 192, 75, 0.1)',
+                borderWidth: 2,
+                tension: 0.1,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+function loadLatestReading() {
+    fetch('/api/sensors/latest/')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('spo2-value').textContent = data.spo2_level.toFixed(1);
+            document.getElementById('hr-value').textContent = data.heart_rate;
+            document.getElementById('quality-value').textContent = data.sensor_quality;
+            document.getElementById('spo2-status').textContent = data.is_normal ? 'Normal' : 'Abnormal';
+            document.getElementById('reading-time').textContent = new Date(data.timestamp).toLocaleTimeString();
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+function loadStatistics() {
+    fetch('/api/sensors/statistics/')
+        .then(response => response.json())
+        .then(data => {
+            const statsBody = document.getElementById('stats-body');
+            statsBody.innerHTML = `
+                <tr>
+                    <td><strong>SpO2</strong></td>
+                    <td>-</td>
+                    <td>${data.min_spo2}%</td>
+                    <td>${data.max_spo2}%</td>
+                    <td>${data.avg_spo2}%</td>
+                </tr>
+                <tr>
+                    <td><strong>Heart Rate</strong></td>
+                    <td>-</td>
+                    <td>${data.min_heart_rate} BPM</td>
+                    <td>${data.max_heart_rate} BPM</td>
+                    <td>${data.avg_heart_rate} BPM</td>
+                </tr>
+                <tr>
+                    <td><strong>Total Readings</strong></td>
+                    <td colspan="4">${data.total_readings}</td>
+                </tr>
+            `;
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+function loadReadings(page = 1) {
+    fetch(`/api/sensors/?page=${page}`)
+        .then(response => response.json())
+        .then(data => {
+            const table = document.getElementById('readings-table');
+            let html = '';
+            
+            if (data.results && data.results.length > 0) {
+                data.results.forEach(reading => {
+                    html += `
+                        <tr>
+                            <td>${reading.spo2_level}%</td>
+                            <td>${reading.heart_rate}</td>
+                            <td>
+                                <span class="badge ${reading.is_normal ? 'bg-success' : 'bg-danger'}">
+                                    ${reading.is_normal ? 'Yes' : 'No'}
+                                </span>
+                            </td>
+                            <td>${reading.sensor_quality}%</td>
+                            <td>${new Date(reading.timestamp).toLocaleString()}</td>
+                        </tr>
+                    `;
+                });
+            } else {
+                html = '<tr><td colspan="5" class="text-center text-muted">No readings available</td></tr>';
+            }
+            
+            table.innerHTML = html;
+        })
+        .catch(error => console.error('Error:', error));
+}
+</script>
+{% endblock %}

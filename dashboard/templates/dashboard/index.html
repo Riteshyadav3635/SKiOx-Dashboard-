@@ -1,0 +1,342 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}SkiOx Dashboard - Home{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h1 class="mb-4">
+            <i class="bi bi-speedometer2"></i> System Dashboard
+        </h1>
+    </div>
+</div>
+
+<!-- System Status Cards -->
+<div class="row mb-4">
+    <div class="col-md-6 col-lg-3">
+        <div class="card border-primary shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-1">System State</h6>
+                        <p class="card-text mb-0">
+                            {% if system_status %}
+                                <span class="badge bg-info">{{ system_status.get_system_state_display }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Not Available</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <i class="bi bi-cpu fs-1 text-primary opacity-25"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-lg-3">
+        <div class="card border-success shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-1">SpO2 Level</h6>
+                        <p class="card-text mb-0">
+                            {% if latest_sensor %}
+                                <span class="fs-5 fw-bold">{{ latest_sensor.spo2_level }}%</span>
+                            {% else %}
+                                <span class="text-muted">No data</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <i class="bi bi-droplet-fill fs-1 text-success opacity-25"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-lg-3">
+        <div class="card border-warning shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-1">Heart Rate</h6>
+                        <p class="card-text mb-0">
+                            {% if latest_sensor %}
+                                <span class="fs-5 fw-bold">{{ latest_sensor.heart_rate }} BPM</span>
+                            {% else %}
+                                <span class="text-muted">No data</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <i class="bi bi-heart-pulse fs-1 text-warning opacity-25"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-lg-3">
+        <div class="card border-danger shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-1">Active Alerts</h6>
+                        <p class="card-text mb-0">
+                            <span class="fs-5 fw-bold text-danger">{{ active_alerts }}</span>
+                        </p>
+                    </div>
+                    <i class="bi bi-exclamation-triangle-fill fs-1 text-danger opacity-25"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Control & Status Board -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="bi bi-gear"></i> System Control</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Oxygen Delivery Status</label>
+                    <div id="oxygen-status">
+                        {% if system_status.oxygen_delivery_active %}
+                            <span class="badge bg-danger">Active</span>
+                        {% else %}
+                            <span class="badge bg-success">Inactive</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <button class="btn btn-success btn-sm me-2" id="activate-oxygen">
+                    <i class="bi bi-play-fill"></i> Activate
+                </button>
+                <button class="btn btn-danger btn-sm" id="deactivate-oxygen">
+                    <i class="bi bi-stop-fill"></i> Deactivate
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="bi bi-lightning-charge"></i> Battery Status</h5>
+            </div>
+            <div class="card-body" id="battery-container">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Component Status -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="bi bi-cpu"></i> Component Status</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Component</th>
+                                <th>Status</th>
+                                <th>Online</th>
+                                <th>Last Updated</th>
+                            </tr>
+                        </thead>
+                        <tbody id="components-table">
+                            {% for component in components %}
+                            <tr>
+                                <td>{{ component.get_component_name_display }}</td>
+                                <td>
+                                    <span class="badge bg-{% if component.status == 'ACTIVE' %}success{% elif component.status == 'ERROR' %}danger{% else %}secondary{% endif %}">
+                                        {{ component.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if component.is_online %}
+                                        <span class="badge bg-success">Online</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Offline</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ component.last_updated|date:"H:i:s" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">No components registered</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart Section -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="bi bi-graph-up"></i> SpO2 Trend</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="spo2Chart" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="bi bi-graph-up"></i> Heart Rate Trend</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="hrChart" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Load battery status
+    loadBatteryStatus();
+    
+    // Load recent readings and charts
+    loadSensorData();
+    
+    // Set up auto-refresh (every 5 seconds)
+    setInterval(loadBatteryStatus, 5000);
+    setInterval(loadSensorData, 5000);
+    
+    // Setup control buttons
+    document.getElementById('activate-oxygen').addEventListener('click', function() {
+        fetch('/api/system/activate_oxygen_delivery/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert('Oxygen delivery activated!');
+            loadBatteryStatus();
+        })
+        .catch(error => console.error('Error:', error));
+    });
+    
+    document.getElementById('deactivate-oxygen').addEventListener('click', function() {
+        fetch('/api/system/deactivate_oxygen_delivery/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert('Oxygen delivery deactivated!');
+            loadBatteryStatus();
+        })
+        .catch(error => console.error('Error:', error));
+    });
+});
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function loadBatteryStatus() {
+    fetch('/api/battery/current_battery/')
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('battery-container');
+            container.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Percentage:</strong> ${data.battery_percentage}%</p>
+                        <div class="progress" style="height: 25px;">
+                            <div class="progress-bar ${getBatteryColor(data.battery_percentage)}" 
+                                 role="progressbar" 
+                                 style="width: ${data.battery_percentage}%"
+                                 aria-valuenow="${data.battery_percentage}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">
+                                ${data.battery_percentage}%
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Voltage:</strong> ${data.voltage.toFixed(2)}V</p>
+                        <p><strong>Status:</strong> 
+                            <span class="badge ${data.charging ? 'bg-warning' : 'bg-secondary'}">
+                                ${data.charging ? 'Charging' : 'Discharging'}
+                            </span>
+                        </p>
+                        <p><strong>Health:</strong> 
+                            <span class="badge bg-${getHealthColor(data.health)}">
+                                ${data.health}
+                            </span>
+                        </p>
+                    </div>
+                </div>
+            `;
+        })
+        .catch(error => console.error('Error loading battery:', error));
+}
+
+function getBatteryColor(percentage) {
+    if (percentage > 60) return 'bg-success';
+    if (percentage > 30) return 'bg-warning';
+    return 'bg-danger';
+}
+
+function getHealthColor(health) {
+    if (health === 'GOOD') return 'success';
+    if (health === 'FAIR') return 'warning';
+    return 'danger';
+}
+
+function loadSensorData() {
+    fetch('/api/sensors/statistics/')
+        .then(response => response.json())
+        .then(data => {
+            updateCharts(data);
+        })
+        .catch(error => console.error('Error loading sensor data:', error));
+}
+
+let spo2Chart = null;
+let hrChart = null;
+
+function updateCharts(data) {
+    // Here you would update the charts with real data
+    // This is a placeholder - actual implementation would fetch historical data
+    console.log('Chart data:', data);
+}
+</script>
+{% endblock %}

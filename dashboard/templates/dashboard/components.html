@@ -1,0 +1,281 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}SkiOx Dashboard - Components{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h1 class="mb-4">
+            <i class="bi bi-cpu"></i> Component Management
+        </h1>
+    </div>
+</div>
+
+<!-- Component Summary Cards -->
+<div class="row mb-4" id="summary-cards">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h3 id="total-count">-</h3>
+                <p class="card-text">Total Components</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-success">
+            <div class="card-body">
+                <h3 id="active-count" class="text-success">-</h3>
+                <p class="card-text">Active</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-warning">
+            <div class="card-body">
+                <h3 id="error-count" class="text-warning">-</h3>
+                <p class="card-text">Errors</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-danger">
+            <div class="card-body">
+                <h3 id="warning-count" class="text-danger">-</h3>
+                <p class="card-text">Warnings</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Components Table -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-list-check"></i> All Components</h5>
+                <button class="btn btn-sm btn-primary" id="refresh-btn">
+                    <i class="bi bi-arrow-clockwise"></i> Refresh
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Component Name</th>
+                                <th>Status</th>
+                                <th>Online Status</th>
+                                <th>Last Updated</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="components-table">
+                            {% for component in components %}
+                            <tr id="component-{{ component.id }}">
+                                <td>
+                                    <i class="bi bi-chip"></i> {{ component.get_component_name_display }}
+                                </td>
+                                <td>
+                                    <span class="badge bg-{% if component.status == 'ACTIVE' %}success{% elif component.status == 'INACTIVE' %}secondary{% elif component.status == 'ERROR' %}danger{% elif component.status == 'WARNING' %}warning{% else %}info{% endif %}">
+                                        {{ component.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if component.is_online %}
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-circle-fill"></i> Online
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-danger">
+                                            <i class="bi bi-circle-fill"></i> Offline
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small>{{ component.last_updated|date:"M d, H:i:s" }}</small>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-info view-details" data-component-id="{{ component.id }}">
+                                        <i class="bi bi-eye"></i> Details
+                                    </button>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">
+                                    <i class="bi bi-inbox"></i> No components registered
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Component Details Modal -->
+<div class="modal fade" id="detailsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Component Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Component Categories -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-lightning"></i> Core Components</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>ESP32 Dev Board</span>
+                        <span class="badge bg-success">ESP32-WROOM-32</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>SpO2 Sensor</span>
+                        <span class="badge bg-success">MAX30102</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Relay Module</span>
+                        <span class="badge bg-success">5V Single Channel</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Solenoid Valve</span>
+                        <span class="badge bg-success">12V NC 1/4"</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="bi bi-cpu"></i> Power Management</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Li-Ion Battery</span>
+                        <span class="badge bg-info">3.7V 2600mAh</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>TP4056 Module</span>
+                        <span class="badge bg-info">Charging</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>MT3608 Boost</span>
+                        <span class="badge bg-info">3.7V to 12V</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>AMS1117-3.3 LDO</span>
+                        <span class="badge bg-info">Regulator</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadComponentSummary();
+    setupEventListeners();
+    
+    // Auto-refresh every 10 seconds
+    setInterval(loadComponentSummary, 10000);
+});
+
+function loadComponentSummary() {
+    fetch('/api/components/component_summary/')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('total-count').textContent = data.total_components;
+            document.getElementById('active-count').textContent = data.active;
+            document.getElementById('error-count').textContent = data.errors;
+            document.getElementById('warning-count').textContent = data.warnings;
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+function setupEventListeners() {
+    document.querySelectorAll('.view-details').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const componentId = this.dataset.componentId;
+            loadComponentDetails(componentId);
+        });
+    });
+    
+    document.getElementById('refresh-btn').addEventListener('click', loadComponentSummary);
+}
+
+function loadComponentDetails(componentId) {
+    fetch(`/api/components/${componentId}/`)
+        .then(response => response.json())
+        .then(data => {
+            const modal = new bootstrap.Modal(document.getElementById('detailsModal'));
+            const modalBody = document.getElementById('modal-body');
+            
+            modalBody.innerHTML = `
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p><strong>Component:</strong> ${data.component_display}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Status:</strong> 
+                            <span class="badge bg-${getStatusColor(data.status)}">
+                                ${data.status_display}
+                            </span>
+                        </p>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p><strong>Online:</strong> 
+                            <span class="badge bg-${data.is_online ? 'success' : 'danger'}">
+                                ${data.is_online ? 'Yes' : 'No'}
+                            </span>
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Last Updated:</strong> ${new Date(data.last_updated).toLocaleString()}</p>
+                    </div>
+                </div>
+            `;
+            
+            modal.show();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to load component details');
+        });
+}
+
+function getStatusColor(status) {
+    const colors = {
+        'ACTIVE': 'success',
+        'INACTIVE': 'secondary',
+        'ERROR': 'danger',
+        'WARNING': 'warning'
+    };
+    return colors[status] || 'info';
+}
+</script>
+{% endblock %}
