@@ -380,8 +380,8 @@ This project is part of the NIET BTech CSE-IoT curriculum.
 - **Project Name**: SkiOx - IoT Emergency Oxygen Delivery System
 - **Institution**: NIET (Noida Institute of Engineering and Technology)
 - **Program**: BTech CSE-IoT
-- **Student**: Piyushkant Bhardwaj
-- **Roll No**: 2301331550063
+- **Student**: Anup Kumar
+- **Roll No**: 2301331550025
 
 ## Support
 
