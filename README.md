@@ -1,405 +1,109 @@
-cd "/Users/anupkumar/Desktop/SkiOx- DashBoard"
+# SkiOx Dashboard
 
-# Install & Setup
-pip install -r requirements.txt
-python manage.py migrate
-python manage.py createsuperuser
-python manage.py shell < load_sample_data.py
+A group-project dashboard for presenting and managing status data for the SkiOx emergency oxygen delivery system concept. The repository contains a Django web application and REST API, plus a separate lightweight Python HTTP-server prototype in `app.py`.
 
-# Run Server
-python manage.py runserver
+> **Demonstration software:** This project does not itself connect to or control medical hardware. The dashboard and sample records are for software demonstration and coursework; they are not a medical device or a substitute for clinical monitoring.
 
-# Access Dashboard
-http://127.0.0.1:8000/# SkiOx Dashboard
+## Problem and objectives
 
-A comprehensive Django-based monitoring and control dashboard for the **SkiOx IoT Emergency Oxygen Delivery System**. This system tracks all components, sensor readings, battery status, and system health in real-time.
+An emergency oxygen system needs a clear way to view component state, oxygen-system state, battery information, sensor readings, alerts, and system logs. SkiOx Dashboard provides web pages and API endpoints for recording and reviewing those data. The current repository demonstrates the software layer; the code does not include an ESP32 firmware project or a verified live sensor connection.
 
 ## Features
 
-- **Real-time Monitoring**: Live system status, sensor data, and battery monitoring
-- **Component Management**: Track all 26 components from the SkiOx system
-- **Sensor Data Visualization**: SpO2 levels and heart rate charts
-- **Alert System**: Critical, warning, and informational alerts with resolution tracking
-- **System Logs**: Detailed activity logging for debugging and audit trails
-- **REST API**: Complete API for data access and system control
-- **Responsive Design**: Bootstrap 5 powered responsive UI
-- **Admin Panel**: Django admin interface for data management
+- Django dashboard pages for system overview, components, sensor data, alerts, and logs.
+- Django REST Framework endpoints for component status, SpO2 and heart-rate readings, system state, battery status, alerts, logs, and a summary.
+- SQLite-backed Django models and Django admin.
+- Sample-data loader for local demonstrations.
+- Responsive templates using Bootstrap assets from CDNs.
+- A separate standard-library server in `app.py` on port 8001, with its own SQLite schema. It is a prototype distinct from the Django app.
 
-## Project Structure
+## Technology stack
 
-```
-skiox_dashboard/
-├── manage.py                 # Django management script
-├── requirements.txt          # Python dependencies
-├── config/                   # Django configuration
-│   ├── settings.py          # Django settings
-│   ├── urls.py              # URL routing
-│   └── wsgi.py              # WSGI application
-├── dashboard/               # Main app
-│   ├── models.py            # Database models
-│   ├── views.py             # Views and API endpoints
-│   ├── serializers.py       # REST serializers
-│   ├── urls.py              # App URL routing
-│   ├── admin.py             # Admin interface
-│   ├── templates/
-│   │   └── dashboard/
-│   │       ├── base.html    # Base template
-│   │       ├── index.html   # Dashboard home
-│   │       ├── components.html
-│   │       ├── sensor_data.html
-│   │       ├── alerts.html
-│   │       └── logs.html
-│   └── static/
-│       ├── css/
-│       │   └── style.css
-│       └── js/
-│           └── main.js
-└── README.md
+**Django application:** Python, Django 5.0.1, Django REST Framework 3.14.0, SQLite, Django templates, JavaScript, and custom CSS. `django-cors-headers` is installed and configured. The templates load Bootstrap 5.3, Bootstrap Icons 1.10, Chart.js 3.9, and Axios from CDNs.
+
+**Standalone prototype:** Python standard library modules (`http.server`, `socketserver`, `sqlite3`, and related modules). It does not use the Django dependencies.
+
+Exact Python packages and versions for the Django application are listed in [`requirements.txt`](requirements.txt).
+
+## Architecture
+
+```text
+Browser
+  ├── Django templates + static CSS/JavaScript
+  └── REST calls ──> Django URL router ──> views / DRF viewsets
+                                           ├── serializers
+                                           └── Django models ──> SQLite (db.sqlite3)
+
+Separate prototype: browser ──> app.py HTTP server ──> SQLite (skiox_data.db)
 ```
 
-## SkiOx System Components
+The Django application is the recommended path for setup and demonstration. The standalone `app.py` prototype is independent and does not share the Django database or API implementation.
 
-### Core Components
-- **ESP32 Dev Board** - Main microcontroller
-- **SpO2 Sensor (MAX30102)** - Blood oxygen level monitoring
-- **Relay Module** - System control relay
-- **Solenoid Valve** - Oxygen delivery valve
-- **Li-Ion Battery** - 3.7V 2600mAh power source
+## Setup and run (Django application)
 
-### Power Management
-- **TP4056 Module** - Battery charging controller
-- **MT3608 Boost Converter** - 3.7V to 12V converter
-- **AMS1117-3.3 LDO** - 3.3V voltage regulator
+Requirements: Python with support for the pinned Django 5.0.1 release and `pip`. The project checks passed in the available Python 3.14 environment.
 
-### Optional Components
-- **OLED Display** - 0.96" I2C display
-- **Active Buzzer** - 5V audio alert
-- **Red LED** - Visual indicator
-
-## Installation
-
-### Prerequisites
-- Python 3.8+
-- pip (Python package manager)
-- Virtual environment (recommended)
-
-### Setup Guide
-
-1. **Clone the repository**
-   ```bash
-   cd /Users/anupkumar/Desktop/SkiOx-DashBoard/skiox_dashboard
-   ```
-
-2. **Create virtual environment**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-3. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Create migrations**
-   ```bash
-   python manage.py makemigrations
-   ```
-
-5. **Apply migrations**
-   ```bash
-   python manage.py migrate
-   ```
-
-6. **Create superuser (admin)**
-   ```bash
-   python manage.py createsuperuser
-   ```
-
-7. **Collect static files**
-   ```bash
-   python manage.py collectstatic --noinput
-   ```
-
-8. **Run development server**
-   ```bash
-   python manage.py runserver
-   ```
-
-   The dashboard will be available at: `http://127.0.0.1:8000/`
-
-## Usage
-
-### Web Interface
-- **Dashboard (/)**: Main overview page with system status
-- **Components (/components/)**: Component management and status
-- **Sensor Data (/sensor-data/)**: SpO2 and heart rate monitoring
-- **Alerts (/alerts/)**: Alert management and history
-- **Logs (/logs/)**: System activity logs
-- **Admin (/admin/)**: Django admin interface
-
-### API Endpoints
-
-#### Component Status
-```
-GET  /api/components/                    # List all components
-GET  /api/components/{id}/               # Get specific component
-POST /api/components/                    # Create component
-GET  /api/components/active_components/  # Get active components
-GET  /api/components/component_summary/  # Get summary statistics
-```
-
-#### Sensor Data
-```
-GET  /api/sensors/                       # List all readings
-POST /api/sensors/                       # Create reading
-GET  /api/sensors/latest/                # Get latest reading
-GET  /api/sensors/statistics/            # Get sensor statistics
-GET  /api/sensors/abnormal_readings/     # Get abnormal readings
-```
-
-#### System Status
-```
-GET  /api/system/                        # List system status
-GET  /api/system/current_status/         # Get current status
-POST /api/system/activate_oxygen_delivery/   # Activate oxygen
-POST /api/system/deactivate_oxygen_delivery/ # Deactivate oxygen
-```
-
-#### Battery Status
-```
-GET  /api/battery/                       # List battery status
-GET  /api/battery/current_battery/       # Get current battery info
-```
-
-#### Alerts
-```
-GET  /api/alerts/                        # List all alerts
-POST /api/alerts/                        # Create alert
-GET  /api/alerts/unresolved_alerts/      # Get unresolved alerts
-POST /api/alerts/{id}/resolve/           # Mark as resolved
-GET  /api/alerts/alert_summary/          # Get alert summary
-```
-
-#### System Logs
-```
-GET  /api/logs/                          # List all logs
-GET  /api/logs/error_logs/               # Get error/critical logs
-```
-
-#### Dashboard Summary
-```
-GET  /api/summary/                       # Get complete dashboard summary
-```
-
-## Database Models
-
-### ComponentStatus
-Tracks the status of each SkiOx component
-- component_name
-- status (ACTIVE, INACTIVE, ERROR, WARNING, MAINTENANCE)
-- is_online
-- last_updated
-
-### SensorReading
-Stores SpO2 and heart rate readings
-- spo2_level (0-100%)
-- heart_rate (BPM)
-- is_normal
-- sensor_quality
-- timestamp
-
-### SystemStatus
-Overall system state
-- is_active
-- system_state (IDLE, MONITORING, DELIVERING, ERROR, SHUTDOWN)
-- oxygen_valve_open
-- relay_engaged
-- oxygen_delivery_active
-- system_uptime
-
-### BatteryStatus
-Battery information
-- battery_percentage
-- voltage
-- charging
-- health (GOOD, FAIR, POOR)
-- charge_cycles
-
-### Alert
-System alerts and notifications
-- alert_type (CRITICAL, WARNING, INFO)
-- title
-- description
-- is_resolved
-- created_at
-- resolved_at
-
-### SystemLog
-Activity logging
-- log_level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-- message
-- component
-- timestamp
-
-## Configuration
-
-### Django Settings
-Edit `config/settings.py`:
-- `DEBUG`: Set to `False` for production
-- `ALLOWED_HOSTS`: Add your domain
-- `SECRET_KEY`: Change to a secure random key
-- `DATABASES`: Configure your database
-- `CORS_ALLOWED_ORIGINS`: Configure CORS for frontend
-
-## API Testing
-
-### Using cURL
 ```bash
-# Get system status
-curl http://127.0.0.1:8000/api/system/current_status/
-
-# Get latest sensor reading
-curl http://127.0.0.1:8000/api/sensors/latest/
-
-# Get battery status
-curl http://127.0.0.1:8000/api/battery/current_battery/
-```
-
-### Using Python Requests
-```python
-import requests
-
-# Get sensor data
-response = requests.get('http://127.0.0.1:8000/api/sensors/statistics/')
-print(response.json())
-
-# Activate oxygen delivery
-response = requests.post(
-    'http://127.0.0.1:8000/api/system/activate_oxygen_delivery/',
-    headers={'X-CSRFToken': csrf_token}
-)
-```
-
-## Data Entry Guide
-
-### Adding Sample Data
-
-1. **Via Admin Panel** (`/admin/`)
-   - Login with superuser credentials
-   - Add components, readings, and alerts
-
-2. **Via API**
-   ```bash
-   curl -X POST http://127.0.0.1:8000/api/sensors/ \
-     -H "Content-Type: application/json" \
-     -d '{"spo2_level": 95.5, "heart_rate": 72, "is_normal": true, "sensor_quality": 98}'
-   ```
-
-3. **Via Django Shell**
-   ```bash
-   python manage.py shell
-   ```
-
-## Development
-
-### Running Tests
-```bash
-python manage.py test
-```
-
-### Creating Migrations
-```bash
-python manage.py makemigrations
+git clone https://github.com/Riteshyadav3635/SKiOx-Dashboard-.git
+cd SKiOx-Dashboard-
+python3 -m venv .venv
+source .venv/bin/activate       # Windows: .venv\Scripts\activate
+python -m pip install -r requirements.txt
 python manage.py migrate
+python manage.py shell < load_sample_data.py   # Optional demo records
+python manage.py runserver
 ```
 
-### Collecting Static Files
+Open <http://127.0.0.1:8000/>. Create an admin account with `python manage.py createsuperuser`, then visit <http://127.0.0.1:8000/admin/>. The sample-data loader can be run again; it uses `get_or_create` for its records.
+
+The simple `run.sh` script starts this Django development server. To run the standalone prototype instead, activate a Python environment and run `python app.py`; it listens on port 8001 and creates `skiox_data.db` in the current directory.
+
+## Environment configuration
+
+For local development, Django defaults to debug mode, localhost hosts, and the repository's SQLite database. These defaults are for local use only. Settings can be overridden with environment variables:
+
+| Variable | Purpose | Local default |
+| --- | --- | --- |
+| `DJANGO_SECRET_KEY` | Django signing key | Local-only development value; set a private value outside local development |
+| `DJANGO_DEBUG` | Enable Django debug mode (`true`/`false`) | `true` |
+| `DJANGO_ALLOWED_HOSTS` | Comma-separated allowed host names | `localhost,127.0.0.1` |
+| `DJANGO_CORS_ALLOWED_ORIGINS` | Comma-separated CORS origins | Localhost ports 3000 and 8000 |
+
+Example for local shell use:
+
 ```bash
-python manage.py collectstatic
+export DJANGO_SECRET_KEY="$(python -c 'from secrets import token_urlsafe; print(token_urlsafe(48))')"
+export DJANGO_DEBUG=true
+export DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost
 ```
 
-## Production Deployment
+Do not commit local `.env` files or production secrets. The repository uses SQLite by default; PostgreSQL and Redis are not configured as Django data services.
 
-1. Set `DEBUG = False` in settings
-2. Update `ALLOWED_HOSTS`
-3. Update `SECRET_KEY`
-4. Configure static file serving
-5. Use a production WSGI server (Gunicorn, uWSGI)
-6. Set up a database (PostgreSQL recommended)
-7. Configure email for alerts
-8. Use HTTPS with proper SSL certificates
+## API overview
 
-### Deploy with Gunicorn
-```bash
-pip install gunicorn
-gunicorn config.wsgi:application --bind 0.0.0.0:8000
-```
+The Django API is mounted under `/api/`. DRF routers provide endpoints for `/components/`, `/sensors/`, `/system/`, `/battery/`, `/alerts/`, and `/logs/`; the dashboard summary is at `/api/summary/`. Viewset actions include current/latest status, statistics, unresolved alerts, alert resolution, and oxygen-delivery state updates. These are software data operations; they do not actuate physical hardware.
 
-## Troubleshooting
+## Screenshots
 
-### Port Already in Use
-```bash
-# Kill process on port 8000
-lsof -ti:8000 | xargs kill -9
-```
+No screenshots are currently included. Add reviewed screenshots under `docs/screenshots/` and link them here before publishing a visual portfolio presentation.
 
-### Database Issues
-```bash
-# Reset database
-python manage.py flush
-python manage.py migrate
-```
+## Group project and attribution
 
-### Static Files Not Loading
-```bash
-python manage.py collectstatic --clear --noinput
-```
+This is a group project. The available Git history records:
 
-### Module Import Errors
-```bash
-pip install -r requirements.txt --upgrade
-```
+- **Anup Kumar** (`01-anupkr`): authored the initial project commit, which added the application and project files.
+- **Ritesh Kumar Yadav** (`Riteshyadav3635`): authored the commit adding the initial Django database migration.
 
-## Contributing
+These credits describe the commits visible in this repository; the available history does not establish further task-level responsibilities. Original project attribution to Anup and the group context are retained.
 
-When contributing to the SkiOx Dashboard:
+## Future improvements
 
-1. Create a new branch for your feature
-2. Follow PEP 8 style guide
-3. Add tests for new functionality
-4. Update documentation
-5. Submit a pull request
+- Connect and validate a real sensor/firmware data source before describing readings as live.
+- Add automated tests for Django views, API behavior, and data validation.
+- Add authentication and authorization for state-changing API endpoints.
+- Align or retire the separate `app.py` prototype and make the supported run path unambiguous.
+- Add verified screenshots and deployment documentation after those workflows are tested.
 
-## License
+## Project documentation
 
-This project is part of the NIET BTech CSE-IoT curriculum.
-
-## Project Information
-
-- **Project Name**: SkiOx - IoT Emergency Oxygen Delivery System
-- **Institution**: NIET (Noida Institute of Engineering and Technology)
-- **Program**: BTech CSE-IoT
-- **Student**: Anup Kumar
-- **Roll No**: 2301331550025
-
-## Support
-
-For issues, questions, or suggestions:
-1. Check the existing documentation
-2. Review API endpoint documentation
-3. Check Django logs for errors
-4. Consult the troubleshooting section
-
-## Notes
-
-- Keep in mind the important notes from the component shopping list
-- MAX30102 sensor (NOT MAX30100) is required
-- 1N4007 flyback diode is critical for solenoid protection
-- TP4056 must be the 2-chip version with protection circuit
-- Always verify component compatibility before integration
-
----
-
-**Last Updated**: April 2026
-**Version**: 1.0.0
+Additional project notes are available in [`API_DOCUMENTATION.md`](API_DOCUMENTATION.md), [`QUICK_START.md`](QUICK_START.md), and the other documentation files. Treat older deployment and feature claims as historical notes where they conflict with the current source code.

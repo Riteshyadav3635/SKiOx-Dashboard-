@@ -7,12 +7,25 @@ __pycache__/
 
 # Virtual environments
 .venv/
+.venv-*/
 venv/
 env/
+
+# Local configuration and secrets
+.env
+.env.*
 
 # Django / local runtime data
 *.sqlite3
 *.db
+staticfiles/
+media/
+*.log
+
+# Test and coverage output
+.pytest_cache/
+.coverage
+htmlcov/
 
 # OS / editor
 .DS_Store
